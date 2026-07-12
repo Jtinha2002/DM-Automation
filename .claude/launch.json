@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "instabot",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"],
+      "cwd": "D:\\Claudio\\instagram-automation",
+      "port": 3000
+    }
+  ]
+}

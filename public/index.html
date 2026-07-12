@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InstaBot — Automação de Comentários</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<!-- Login overlay (shown when the panel is password-protected) -->
+<div id="loginOverlay" class="login-overlay hidden">
+  <form class="login-card" onsubmit="doLogin(event)">
+    <div class="login-logo">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+      <span>InstaBot</span>
+    </div>
+    <p class="login-sub">Painel protegido. Digite a senha de acesso.</p>
+    <input type="password" id="loginPassword" class="input" placeholder="Senha" autocomplete="current-password" autofocus />
+    <button type="submit" class="btn btn-primary" id="loginBtn" style="width:100%;justify-content:center">Entrar</button>
+    <div id="loginError" class="login-error hidden"></div>
+  </form>
+</div>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+      <span>InstaBot</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="nav-item active" data-tab="dashboard">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a class="nav-item" data-tab="rules">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Regras
+      </a>
+      <a class="nav-item" data-tab="flows">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="12" r="3"/><path d="M9 6h6a3 3 0 0 1 3 3M9 18h6a3 3 0 0 0 3-3"/></svg>
+        Fluxos
+      </a>
+      <a class="nav-item" data-tab="inbox">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Inbox
+        <span id="inboxBadge" class="nav-badge hidden">0</span>
+      </a>
+      <a class="nav-item" data-tab="audience">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Audiência
+      </a>
+      <a class="nav-item" data-tab="logs">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Logs
+      </a>
+      <a class="nav-item" data-tab="accounts">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Contas
+      </a>
+      <a class="nav-item" data-tab="settings">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Configurações
+      </a>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="sidebar-bottom-row">
+        <button class="theme-toggle" onclick="toggleTheme()" title="Alternar tema">
+          <svg id="themeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </button>
+        <button class="theme-toggle" onclick="appLogout()" title="Sair do painel">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+      <div class="sidebar-account" id="accountStatus">
+        <div class="account-dot disconnected" id="statusDot"></div>
+        <div class="account-info">
+          <span id="accountName">Não conectado</span>
+          <span id="accountSub" class="account-sub">Nenhuma conta</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div id="toast" class="toast hidden"></div>
+
+    <!-- Token expiry alert -->
+    <div id="expiryAlert" class="expiry-alert hidden">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="expiryAlertText"></span>
+      <a href="/auth/login" class="btn btn-sm btn-outline" style="margin-left:auto">Renovar token</a>
+    </div>
+
+    <!-- ── Dashboard ── -->
+    <section id="tab-dashboard" class="tab-content active">
+      <div class="page-header">
+        <h1>Dashboard</h1>
+        <p>Visão geral das automações</p>
+      </div>
+
+      <div id="connectBanner" class="connect-banner hidden">
+        <div class="banner-content">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div><strong>Conecte seu Instagram para começar</strong><p>Autentique para receber e responder comentários automaticamente.</p></div>
+        </div>
+        <a href="/auth/login" class="btn btn-primary">Conectar Instagram</a>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-icon comments"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div class="stat-info"><span class="stat-value" id="stat-comments">0</span><span class="stat-label">Comentários</span></div></div>
+        <div class="stat-card"><div class="stat-icon replies"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg></div><div class="stat-info"><span class="stat-value" id="stat-replies">0</span><span class="stat-label">Respostas</span></div></div>
+        <div class="stat-card"><div class="stat-icon dms"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div><div class="stat-info"><span class="stat-value" id="stat-dms">0</span><span class="stat-label">DMs</span></div></div>
+        <div class="stat-card"><div class="stat-icon errors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><div class="stat-info"><span class="stat-value" id="stat-errors">0</span><span class="stat-label">Erros</span></div></div>
+        <div class="stat-card"><div class="stat-icon retries"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.6"/></svg></div><div class="stat-info"><span class="stat-value" id="stat-retries">0</span><span class="stat-label">Reenvios pend.</span></div></div>
+      </div>
+
+      <div class="section-header"><h2>Regras Ativas</h2><button class="btn btn-outline btn-sm" onclick="switchTab('rules')">Ver todas</button></div>
+      <div id="dashboardRules" class="mini-list"><div class="empty-state-mini">Nenhuma regra ativa.</div></div>
+
+      <div class="section-header"><h2>Atividade Recente</h2><button class="btn btn-outline btn-sm" onclick="switchTab('logs')">Ver todos</button></div>
+      <div id="dashboardLogs" class="mini-list"><div class="empty-state-mini">Nenhuma atividade ainda.</div></div>
+    </section>
+
+    <!-- ── Rules ── -->
+    <section id="tab-rules" class="tab-content">
+      <div class="page-header">
+        <div><h1>Regras de Automação</h1><p>Arraste para reordenar • Primeira regra que bate dispara</p></div>
+        <button class="btn btn-primary" onclick="openRuleModal()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nova Regra
+        </button>
+      </div>
+      <div id="accountFilterBar" class="filter-bar hidden"></div>
+      <div id="rulesContainer"></div>
+    </section>
+
+    <!-- ── Logs ── -->
+    <section id="tab-logs" class="tab-content">
+      <div class="page-header">
+        <div><h1>Logs de Atividade</h1><p>Histórico completo de todas as automações</p></div>
+        <div class="header-actions">
+          <select id="logAccountFilter" class="select-input" onchange="loadLogs()"><option value="">Todas as contas</option></select>
+          <select id="logFilter" class="select-input" onchange="loadLogs()">
+            <option value="">Todos os eventos</option>
+            <option value="comment_received">Comentários recebidos</option>
+            <option value="comment_reply_sent">Respostas enviadas</option>
+            <option value="dm_sent">DMs enviadas</option>
+            <option value="follow_check_failed">Não segue</option>
+            <option value="follow_gate_sent">Follow-gate enviado</option>
+            <option value="cooldown_skipped">Cooldown ativo</option>
+            <option value="flow_started">Fluxo iniciado</option>
+            <option value="flow_done">Fluxo concluído</option>
+            <option value="comment_reply_failed">Falhas em respostas</option>
+            <option value="dm_failed">Falhas em DMs</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="exportLogs()">⬇ CSV</button>
+          <button class="btn btn-danger-outline btn-sm" onclick="clearLogs()">Limpar</button>
+        </div>
+      </div>
+      <div id="logsContainer"></div>
+    </section>
+
+    <!-- ── Flows (list) ── -->
+    <section id="tab-flows" class="tab-content">
+      <div class="page-header">
+        <div><h1>Fluxos</h1><p>Construa automações visuais arrastando blocos — estilo ManyChat</p></div>
+        <button class="btn btn-primary" onclick="openFlowTemplates()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Novo Fluxo
+        </button>
+      </div>
+      <div id="flowsList"></div>
+    </section>
+
+    <!-- ── Audience ── -->
+    <section id="tab-audience" class="tab-content">
+      <div class="page-header">
+        <div><h1>Audiência</h1><p>Todos que interagiram — adicione tags e dispare mensagens em massa</p></div>
+        <button class="btn btn-primary" onclick="openBroadcast()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+          Disparar broadcast
+        </button>
+      </div>
+      <div class="filter-bar">
+        <input id="contactSearch" class="input" placeholder="Buscar @usuário..." style="max-width:220px" oninput="loadContacts()" />
+        <select id="contactTagFilter" class="select-input" onchange="loadContacts()"><option value="">Todas as tags</option></select>
+        <select id="contactAccFilter" class="select-input" onchange="loadContacts()"><option value="">Todas as contas</option></select>
+      </div>
+      <div id="contactsList"></div>
+    </section>
+
+    <!-- ── Inbox ── -->
+    <section id="tab-inbox" class="tab-content">
+      <div class="inbox-layout">
+        <div class="inbox-sidebar">
+          <div class="inbox-sidebar-head">
+            <h2>Conversas</h2>
+            <button class="btn btn-icon" onclick="loadInbox()" title="Atualizar">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            </button>
+          </div>
+          <div class="inbox-list" id="inboxList">
+            <div class="inbox-loading"><div class="skeleton-loader"></div><div class="skeleton-loader"></div><div class="skeleton-loader"></div></div>
+          </div>
+        </div>
+        <div class="inbox-thread" id="inboxThread">
+          <div class="inbox-empty">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <h3>Selecione uma conversa</h3>
+            <p>Escolha uma conversa à esquerda para ver as mensagens e responder manualmente.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Accounts ── -->
+    <section id="tab-accounts" class="tab-content">
+      <div class="page-header">
+        <div><h1>Contas do Instagram</h1><p>Gerencie múltiplas contas conectadas</p></div>
+        <a href="/auth/login" class="btn btn-primary">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Adicionar conta
+        </a>
+      </div>
+      <div id="accountsList"></div>
+    </section>
+
+    <!-- ── Settings ── -->
+    <section id="tab-settings" class="tab-content">
+      <div class="page-header"><h1>Configurações</h1><p>Webhook e testes</p></div>
+      <div class="settings-grid">
+        <div class="card">
+          <div class="card-header"><h3>Webhook</h3></div>
+          <div class="card-body">
+            <div class="info-row"><label>URL do Webhook</label>
+              <div class="copy-field">
+                <input type="text" id="webhookUrl" class="input input-readonly" readonly />
+                <button class="btn btn-icon" onclick="copyWebhookUrl()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+              </div>
+            </div>
+            <div class="info-row"><label>Verify Token</label><p class="info-note">Defina <code>INSTAGRAM_WEBHOOK_VERIFY_TOKEN</code> no <code>.env</code></p></div>
+            <div class="info-row"><label>Campos inscritos</label><div class="tags"><span class="tag">comments</span><span class="tag tag-optional">messages <span style="opacity:.6">(follow-gate)</span></span></div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h3>Teste Manual</h3></div>
+          <div class="card-body">
+            <p class="info-note" style="margin-bottom:14px">Simule um comentário para testar as regras sem postar no Instagram.</p>
+            <div class="form-group"><label>Texto do comentário</label><input type="text" id="testCommentText" class="input" placeholder="Ex: Quero o link!" /></div>
+            <div class="form-group"><label>Username simulado</label><input type="text" id="testCommentUser" class="input" placeholder="@usuario_teste" /></div>
+            <div class="form-group">
+              <label>Conta alvo</label>
+              <select id="testAccountSelect" class="input select-input"></select>
+            </div>
+            <button class="btn btn-primary" onclick="sendTestComment()">Enviar Simulação</button>
+            <div id="testResult" class="test-result hidden"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h3>Fila de Reenvio</h3></div>
+          <div class="card-body" id="retryQueuePanel"><div class="skeleton-loader"></div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ── Broadcast Modal ── -->
+<div id="broadcastModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>📣 Disparar Broadcast</h2>
+      <button class="modal-close" onclick="closeBroadcast()"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Conta <span class="required">*</span></label>
+        <select id="bcAccount" class="input select-input" onchange="updateBroadcastPreview()"></select>
+      </div>
+      <div class="form-group">
+        <label>Segmento</label>
+        <select id="bcTag" class="input select-input" onchange="updateBroadcastPreview()"><option value="">Toda a audiência</option></select>
+      </div>
+      <div id="bcPreview" class="bc-preview">—</div>
+      <div class="form-group">
+        <div class="label-row"><label>Mensagem</label><span id="bcCounter" class="char-count">0 / 2200</span></div>
+        <textarea id="bcText" class="input textarea" rows="3" maxlength="2200" placeholder="Olá! Novidade fresquinha pra você 👀"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Imagem <span class="text-muted">(opcional, URL)</span></label>
+        <input id="bcImage" class="input" placeholder="https://..." />
+      </div>
+      <div class="follow-gate-note">⚠ O Instagram só entrega para quem te mandou mensagem nas últimas 24h. Os demais são ignorados.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeBroadcast()">Cancelar</button>
+      <button class="btn btn-primary" id="bcSendBtn" onclick="sendBroadcast()">Disparar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Flow Templates Gallery ── -->
+<div id="flowTemplatesModal" class="modal-overlay hidden">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h2>Escolha um modelo de fluxo</h2>
+      <button class="modal-close" onclick="closeFlowTemplates()"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <p class="info-note" style="margin-bottom:16px">Comece de um modelo pronto (é só ajustar palavra-chave e mensagens) ou crie do zero.</p>
+      <div id="flowTemplatesGrid" class="tpl-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Flow Editor (full screen) ── -->
+<div id="flowEditor" class="flow-editor hidden">
+  <div class="flow-topbar">
+    <button class="btn btn-ghost btn-sm" onclick="closeFlowEditor()">← Voltar</button>
+    <input id="flowName" class="flow-name-input" placeholder="Nome do fluxo" />
+    <select id="flowAccount" class="select-input"><option value="">Todas as contas</option></select>
+    <label class="toggle-label" style="gap:8px"><span style="font-size:12.5px">Ativo</span>
+      <label class="toggle"><input type="checkbox" id="flowActive" checked /><span class="toggle-slider"></span></label>
+    </label>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <span id="flowHint" class="flow-hint"></span>
+      <button class="btn btn-primary btn-sm" id="flowSaveBtn" onclick="saveFlow()">Salvar Fluxo</button>
+    </div>
+  </div>
+  <div class="flow-body">
+    <div class="flow-palette">
+      <div class="palette-title">Adicionar bloco</div>
+      <button class="palette-btn" onclick="addFlowNode('message')"><span class="pal-ico msg">✉️</span> Mensagem</button>
+      <button class="palette-btn" onclick="addFlowNode('comment_reply')"><span class="pal-ico rep">💬</span> Resposta no comentário</button>
+      <button class="palette-btn" onclick="addFlowNode('delay')"><span class="pal-ico dly">⏱️</span> Espera (delay)</button>
+      <button class="palette-btn" onclick="addFlowNode('condition')"><span class="pal-ico cnd">🔀</span> Condição</button>
+      <div class="palette-help">
+        <strong>Como conectar:</strong> clique no ponto <span class="port-demo"></span> de saída de um bloco e depois clique no bloco de destino. Clique numa linha para removê-la.
+      </div>
+    </div>
+    <div class="flow-canvas-wrap" id="flowCanvasWrap">
+      <svg id="flowEdges" class="flow-edges"></svg>
+      <div id="flowCanvas" class="flow-canvas"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Rule Wizard (Youze-style, 3 steps + live phone preview) ── -->
+<div id="ruleModal" class="wizard-overlay hidden">
+  <div class="wizard">
+    <div class="wizard-head">
+      <div class="wizard-head-title">
+        <span class="wiz-badge"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/></svg></span>
+        <div>
+          <h2 id="modalTitle">Nova Automação</h2>
+          <p class="wiz-sub">Configure mensagens automáticas no Instagram</p>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeRuleModal()"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+
+    <div class="wizard-body">
+      <!-- LEFT: steps -->
+      <aside class="wizard-steps">
+        <div class="wiz-steps-title">Etapas de Configuração</div>
+        <button type="button" class="wiz-step active" data-step="1" onclick="goToStep(1)">
+          <span class="wiz-step-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg></span>
+          <span class="wiz-step-txt"><strong>Gatilho</strong><small>quando a automação dispara</small></span>
+          <span class="wiz-step-check">✓</span>
+        </button>
+        <button type="button" class="wiz-step" data-step="2" onclick="goToStep(2)">
+          <span class="wiz-step-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+          <span class="wiz-step-txt"><strong>Eles receberão</strong><small>a mensagem automática</small></span>
+          <span class="wiz-step-check">✓</span>
+        </button>
+        <button type="button" class="wiz-step" data-step="3" onclick="goToStep(3)">
+          <span class="wiz-step-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>
+          <span class="wiz-step-txt"><strong>Revisar & ativar</strong><small>últimos ajustes</small></span>
+          <span class="wiz-step-check">✓</span>
+        </button>
+      </aside>
+
+      <!-- CENTER: panels -->
+      <div class="wizard-main">
+        <input type="hidden" id="ruleId" />
+        <input type="checkbox" id="ruleRequireFollow" hidden />
+        <input type="checkbox" id="ruleAllowSkip" hidden checked />
+        <input type="checkbox" id="ruleTriggerDm" hidden />
+
+        <!-- STEP 1 — Gatilho -->
+        <section class="wiz-panel active" data-panel="1">
+          <div class="wiz-panel-head"><span class="wiz-panel-ico grad">⚡</span><div><h3>Gatilho</h3><p>Configure o que dispara a mensagem automática.</p></div></div>
+
+          <div class="form-group" id="wizAccountGroup">
+            <label>Conta do Instagram</label>
+            <select id="ruleAccountId" class="input select-input" onchange="syncPhoneAccount()"><option value="">Todas as contas</option></select>
+          </div>
+
+          <div class="form-group">
+            <label>Quando alguém:</label>
+            <div class="trig-list">
+              <button type="button" id="trigCommentAny" class="trig-opt active" onclick="setTrigger('comment_any')">
+                <span class="trig-ico">💬</span><span class="trig-txt"><strong>Comentar em qualquer publicação ou Reel</strong><small>responde comentários em todos os posts</small></span>
+              </button>
+              <button type="button" id="trigCommentPost" class="trig-opt" onclick="setTrigger('comment_post')">
+                <span class="trig-ico">📌</span><span class="trig-txt"><strong>Comentar em uma publicação específica</strong><small>escolha o post no botão abaixo</small></span>
+              </button>
+              <button type="button" id="trigDm" class="trig-opt" onclick="setTrigger('dm')">
+                <span class="trig-ico">📩</span><span class="trig-txt"><strong>Mandar uma DM / responder um story</strong><small>dispara pela caixa de entrada</small></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="label-row">
+              <label>Palavra-chave <span class="required">*</span></label>
+              <span id="keywordCounter" class="char-count">0</span>
+            </div>
+            <input type="text" id="ruleKeywords" class="input" placeholder="link, cupom, promo, info..." oninput="renderPhonePreview()" />
+            <span class="field-hint">Separe com vírgula. Se o comentário/DM contiver qualquer uma dessas palavras, a automação dispara.</span>
+          </div>
+
+          <div class="form-group" id="wizPostGroup">
+            <label>Publicação específica</label>
+            <div class="post-pick-row">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="openPostPicker()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                Escolher post
+              </button>
+              <div id="postPicked" class="post-picked hidden"></div>
+              <button type="button" class="btn btn-ghost btn-sm hidden" id="postClearBtn" onclick="clearPostFilter()">Limpar</button>
+            </div>
+            <input type="text" id="rulePostId" class="input" placeholder="…ou cole o ID do post aqui" style="margin-top:6px" oninput="onManualPostId()" />
+            <div id="postGrid" class="post-grid hidden"></div>
+          </div>
+        </section>
+
+        <!-- STEP 2 — Eles receberão -->
+        <section class="wiz-panel" data-panel="2">
+          <div class="wiz-panel-head"><span class="wiz-panel-ico grad">💬</span><div><h3>Eles receberão</h3><p>Configure as mensagens enviadas automaticamente.</p></div></div>
+
+          <div class="form-group" id="wizReplyGroup">
+            <div class="label-row"><label>Resposta pública no comentário <span class="text-muted">(opcional)</span></label><span id="replyCounter" class="char-count">0 / 2200</span></div>
+            <textarea id="ruleCommentReply" class="input textarea" rows="2" maxlength="2200" placeholder="Oi @{{username}}! Acabei de te mandar no direct 😊" oninput="renderPhonePreview()"></textarea>
+            <div id="replyPreview" class="msg-preview hidden"></div>
+          </div>
+
+          <div class="form-group">
+            <label>Quem recebe o link?</label>
+            <div class="seg-control seg-3">
+              <button type="button" id="segAll" class="seg-btn active" onclick="setRuleDelivery('all')">
+                <span class="seg-ico">📩</span>
+                <span class="seg-txt">Todos recebem<span class="seg-sub">envia direto, sem exigir seguir</span></span>
+              </button>
+              <button type="button" id="segStrict" class="seg-btn" onclick="setRuleDelivery('strict')">
+                <span class="seg-ico">🔒</span>
+                <span class="seg-txt">Só quem me seguir<span class="seg-sub">precisa seguir pra receber</span></span>
+              </button>
+              <button type="button" id="segChoice" class="seg-btn" onclick="setRuleDelivery('choice')">
+                <span class="seg-ico">🤝</span>
+                <span class="seg-txt">Deixar escolher<span class="seg-sub">não seguir OU seguir e receber</span></span>
+              </button>
+            </div>
+            <div id="followInviteBox" class="follow-invite hidden">
+              <div class="label-row" style="margin-top:10px">
+                <label>Mensagem inicial (com os botões)</label>
+                <span id="promptCounter" class="char-count">0 / 1000</span>
+              </div>
+              <textarea id="ruleFollowPrompt" class="input textarea" rows="2" maxlength="1000"
+                placeholder="Oi @{{username}}! 👋 Como você prefere receber?" oninput="renderPhonePreview()"></textarea>
+              <div id="promptPreview" class="msg-preview hidden"></div>
+              <span class="field-hint">Botões automáticos: <em>⏭️ Só o link</em> · <em>🧡 Seguir e receber</em>.</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="label-row">
+              <label>Mensagem com o link (resposta principal)</label>
+              <span class="text-muted" style="font-size:11px">blocos como no ManyChat</span>
+            </div>
+            <div class="dm-composer">
+              <div id="dmBlocks" class="dm-blocks"></div>
+              <div class="dm-add-bar">
+                <span class="dm-add-label">Adicionar bloco:</span>
+                <button type="button" class="dm-add-btn" onclick="addBlock('text')">📝 Texto</button>
+                <button type="button" class="dm-add-btn" onclick="addBlock('image')">🖼️ Imagem</button>
+                <button type="button" class="dm-add-btn" onclick="addBlock('buttons')">🔘 Botões</button>
+                <button type="button" class="dm-add-btn" onclick="addBlock('card')">🗂️ Card</button>
+              </div>
+            </div>
+            <div id="dmPreviewWrap" class="dm-preview-wrap hidden"><div class="dm-preview-label">PRÉVIA NO CHAT</div><div id="dmChatPreview" class="dm-chat-preview"></div></div>
+          </div>
+        </section>
+
+        <!-- STEP 3 — Revisar & ativar -->
+        <section class="wiz-panel" data-panel="3">
+          <div class="wiz-panel-head"><span class="wiz-panel-ico grad">✅</span><div><h3>Revisar & ativar</h3><p>Últimos ajustes antes de ligar a automação.</p></div></div>
+
+          <div id="wizSummary" class="wiz-summary"></div>
+
+          <div class="form-group">
+            <label>Cooldown por usuário</label>
+            <div class="input-addon" style="max-width:200px">
+              <input type="number" id="ruleCooldownHours" class="input" value="24" min="0" max="720" />
+              <span class="addon-label">horas</span>
+            </div>
+            <span class="field-hint">Tempo mínimo até enviar de novo pra mesma pessoa. 0 = sem limite.</span>
+          </div>
+
+          <div class="form-group">
+            <label class="toggle-label">
+              <span>Automação ativa</span>
+              <label class="toggle"><input type="checkbox" id="ruleActive" checked /><span class="toggle-slider"></span></label>
+            </label>
+          </div>
+        </section>
+
+        <!-- footer nav -->
+        <div class="wizard-footer">
+          <button class="btn btn-ghost" id="wizPrevBtn" onclick="wizPrev()">← Anterior</button>
+          <div class="wiz-dots"><span class="wiz-dot active" data-dot="1"></span><span class="wiz-dot" data-dot="2"></span><span class="wiz-dot" data-dot="3"></span></div>
+          <button class="btn btn-primary" id="wizNextBtn" onclick="wizNext()">Próximo →</button>
+          <button class="btn btn-primary hidden" id="saveRuleBtn" onclick="saveRule()">Salvar automação</button>
+        </div>
+      </div>
+
+      <!-- RIGHT: live phone preview -->
+      <div class="wizard-preview">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="phone-topbar">
+              <span class="phone-back">‹</span>
+              <div class="phone-avatar" id="phoneAvatar">i</div>
+              <div class="phone-user"><strong id="phoneAccountName">@sua_conta</strong><small>Conversa comercial</small></div>
+            </div>
+            <div class="phone-chat" id="phonePreview"></div>
+            <div class="phone-inputbar"><span>Mensagem...</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
+          </div>
+        </div>
+        <p class="phone-caption">Prévia ao vivo · atualiza enquanto você edita</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
