@@ -139,14 +139,22 @@ async function handleComment(value, account) {
       if (rule.comment_reply) {
         await replyToComment(commentId, msg.applyVars(rule.comment_reply, vars), account, rule, postId, fromId, fromUsername, matched);
       }
-      await sendChoiceDM(fromId, fromUsername, rule, account, vars);
-      db.prepare(`
-        INSERT OR REPLACE INTO pending_follow_sends (user_id, username, rule_id, account_id, comment_id, expires_at)
-        VALUES (?, ?, ?, ?, ?, unixepoch() + 86400)
-      `).run(fromId, fromUsername, rule.id, account.id, commentId);
-      db.prepare(`INSERT INTO logs (event_type, account_id, rule_id, comment_id, post_id, user_id, username, keyword_matched, status, error_message)
-        VALUES ('follow_gate_sent', ?, ?, ?, ?, ?, ?, ?, 'pending', 'Aguardando follow')
-      `).run(accountId, rule.id, commentId, postId, fromId, fromUsername, matched);
+      try {
+        await sendChoiceDM(fromId, fromUsername, rule, account, vars, commentId);
+        db.prepare(`
+          INSERT OR REPLACE INTO pending_follow_sends (user_id, username, rule_id, account_id, comment_id, expires_at)
+          VALUES (?, ?, ?, ?, ?, unixepoch() + 86400)
+        `).run(fromId, fromUsername, rule.id, account.id, commentId);
+        db.prepare(`INSERT INTO logs (event_type, account_id, rule_id, comment_id, post_id, user_id, username, keyword_matched, status, error_message)
+          VALUES ('follow_gate_sent', ?, ?, ?, ?, ?, ?, ?, 'pending', 'Aguardando follow')
+        `).run(accountId, rule.id, commentId, postId, fromId, fromUsername, matched);
+      } catch (err) {
+        const m = err.response?.data?.error?.message || err.message;
+        console.error('[WEBHOOK] Choice DM failed:', m);
+        db.prepare(`INSERT INTO logs (event_type, account_id, rule_id, comment_id, post_id, user_id, username, keyword_matched, status, error_message)
+          VALUES ('dm_failed', ?, ?, ?, ?, ?, ?, ?, 'error', ?)
+        `).run(accountId, rule.id, commentId, postId, fromId, fromUsername, matched, m);
+      }
       break;
     }
 
@@ -335,7 +343,9 @@ async function handleDmTrigger(userId, username, text, account, isStoryReply, mi
 // Helpers
 // ────────────────────────────────────────────────
 // DM inicial com 2 opções: só link / seguir e receber
-async function sendChoiceDM(userId, username, rule, account, vars) {
+// commentId: 1ª mensagem depois de um comentário precisa ir como "resposta
+// privada" (recipient.comment_id) — ver lib/messaging.js buildRecipient().
+async function sendChoiceDM(userId, username, rule, account, vars, commentId) {
   const defaultPrompt = `Oi @{{username}}! 👋\n\nComo você prefere receber?`;
   const text = msg.applyVars(rule.follow_prompt_message || defaultPrompt, vars);
   const buttons = [];
@@ -343,12 +353,8 @@ async function sendChoiceDM(userId, username, rule, account, vars) {
   // No modo estrito (allow_skip=0) só segue mesmo — sem o atalho "Só o link".
   if (rule.allow_skip) buttons.push({ content_type: 'text', title: '⏭️ Não seguir, só o link', payload: JUST_SEND });
   buttons.push({ content_type: 'text', title: '🧡 Seguir e receber', payload: FOLLOW_GET });
-  try {
-    await msg.sendQuickReply(account, userId, username, text, buttons);
-    console.log(`[WEBHOOK] Choice DM sent to ${userId} (${buttons.length} botões)`);
-  } catch (err) {
-    console.error('[WEBHOOK] Choice DM failed:', err.response?.data?.error?.message || err.message);
-  }
+  await msg.sendQuickReply(account, userId, username, text, buttons, { commentId });
+  console.log(`[WEBHOOK] Choice DM sent to ${userId} (${buttons.length} botões)`);
 }
 
 // Escolheu "Seguir" mas ainda não segue → link direto do perfil + botão "Já te segui"
@@ -366,7 +372,7 @@ async function sendFollowPrompt(account, userId, uname, customPrompt, vars) {
 
 async function sendRuleDM(userId, username, blocks, vars, account, rule, commentId, postId, matched) {
   try {
-    await msg.sendBlocks(account, userId, username, blocks, vars, { source: 'auto' });
+    await msg.sendBlocks(account, userId, username, blocks, vars, { source: 'auto', commentId });
     db.prepare(`INSERT INTO logs (event_type, account_id, rule_id, comment_id, post_id, user_id, username, keyword_matched, status)
       VALUES ('dm_sent', ?, ?, ?, ?, ?, ?, ?, 'ok')
     `).run(account.id, rule.id, commentId, postId, userId, username, matched);
