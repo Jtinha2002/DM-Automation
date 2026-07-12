@@ -90,6 +90,17 @@ router.get('/callback', async (req, res) => {
         expires_at   = excluded.expires_at
     `).run(longToken, igUserId, username, expiresAt);
 
+    // Subscribe the account to webhooks — sem isso a Meta NUNCA manda comentário/DM,
+    // e esse passo não acontece sozinho só por ter feito login.
+    try {
+      await api.post(`${IG_GRAPH}/v21.0/${igUserId}/subscribed_apps`, null, {
+        params: { subscribed_fields: 'comments,messages,live_comments,message_reactions', access_token: longToken }
+      });
+      console.log(`[AUTH] Webhook subscription ok for ${igUserId}`);
+    } catch (e) {
+      console.error('[AUTH] Webhook subscription failed:', e.response?.data || e.message);
+    }
+
     req.session.authenticated = true;
     res.redirect('/?success=connected&username=' + encodeURIComponent(username));
   } catch (err) {
